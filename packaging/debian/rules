@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+# SPDX-FileCopyrightText: 2026 SIEMstress contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+export PYBUILD_NAME = siemstress
+export PYBUILD_DESTDIR = debian/siemstress
+ICONS = debian/siemstress-gui/usr/share/icons/hicolor
+
+%:
+	dh $@ --buildsystem=pybuild
+
+# Not in the compat 13 sequence yet. Users must exist before tmpfiles sets group ownership.
+execute_before_dh_installtmpfiles:
+	dh_installsysusers
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider
+endif
+
+execute_after_dh_auto_install:
+	install -Dm640 packaging/config.toml debian/siemstress/etc/siemstress/config.toml
+	install -dm750 debian/siemstress/etc/siemstress/rules
+	for size in 16 22 24 32 48 64 128 256; do \
+	    install -Dm644 src/siemstress/assets/icon-$$size.png \
+	        $(ICONS)/$${size}x$${size}/apps/siemstress.png; \
+	done
+	install -Dm644 src/siemstress/assets/icon.svg $(ICONS)/scalable/apps/siemstress.svg
+	install -Dm644 packaging/siemstress.desktop \
+	    debian/siemstress-gui/usr/share/applications/siemstress.desktop

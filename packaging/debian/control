@@ -1,0 +1,43 @@
+Source: siemstress
+Section: admin
+Priority: optional
+Maintainer: SIEMstress contributors <Lezaford@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-hatchling,
+               python3-pytest <!nocheck>,
+               openssl <!nocheck>,
+Standards-Version: 4.7.0
+Homepage: https://github.com/Lezaford/siemstress
+Rules-Requires-Root: no
+
+Package: siemstress
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}, python3 (>= 3.12), systemd
+Suggests: siemstress-gui, siemstress-tui
+Description: lightweight SIEM for homelabs
+ SIEMstress collects logs from the systemd journal, syslog senders on the
+ network, log files and the Docker or Podman API; normalizes authentication,
+ privilege, account, audit and firewall events; raises alerts from detection
+ rules tagged with MITRE ATT&CK techniques; and provides a case workflow
+ (disposition, actions taken, activity log) for working them to a close.
+
+Package: siemstress-gui
+Architecture: all
+Depends: ${misc:Depends},
+         siemstress (= ${source:Version}),
+         python3-pyside6.qtcore,
+         python3-pyside6.qtgui,
+         python3-pyside6.qtwidgets,
+         python3-pyside6.qtsvg,
+         hicolor-icon-theme,
+Description: lightweight SIEM for homelabs - desktop dashboard
+ Qt desktop dashboard for SIEMstress, with tray notifications for new alerts.
+
+Package: siemstress-tui
+Architecture: all
+Depends: ${misc:Depends}, siemstress (= ${source:Version}), python3-textual
+Description: lightweight SIEM for homelabs - terminal dashboard
+ Terminal dashboard for SIEMstress, usable over SSH on headless hosts.

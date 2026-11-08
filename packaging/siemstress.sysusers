@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 SIEMstress contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The collector's account. Add people to the siemstress group to use the dashboards.
+u siemstress - "SIEMstress log collector" /var/lib/siemstress
+# Read the system journal, and /var/log files that are group adm on Debian.
+m siemstress systemd-journal
+m siemstress adm

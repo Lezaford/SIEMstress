@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 SIEMstress contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The config can hold secrets (ntfy topic or token): root and the siemstress group only.
+d /etc/siemstress 0750 root siemstress -
+d /etc/siemstress/rules 0750 root siemstress -
+z /etc/siemstress/config.toml 0640 root siemstress -

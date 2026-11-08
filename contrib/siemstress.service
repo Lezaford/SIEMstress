@@ -1,0 +1,10 @@
+[Unit]
+Description=SIEMstress collector
+
+[Service]
+ExecStart=%h/.local/bin/siemstress run
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

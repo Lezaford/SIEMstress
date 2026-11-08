@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 SIEMstress contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=SIEMstress log collector
+Documentation=man:siemstress(1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/siemstress --config /etc/siemstress/config.toml --db /var/lib/siemstress/events.db run
+User=siemstress
+Group=siemstress
+Restart=on-failure
+RestartSec=10
+
+# Database shared with dashboard users in the siemstress group.
+StateDirectory=siemstress
+StateDirectoryMode=2770
+UMask=0007
+
+# Hardening: read logs and the network, write only the state directory.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SIEMstress
+GenericName=Security Dashboard
+Comment=Alerts and logs from your homelab
+Exec=siemstress gui
+Icon=siemstress
+Terminal=false
+Categories=System;Security;Monitor;
+Keywords=siem;security;logs;alerts;

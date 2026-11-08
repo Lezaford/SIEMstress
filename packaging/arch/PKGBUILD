@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2026 SIEMstress contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Maintainer: SIEMstress contributors <Lezaford at users dot noreply dot github dot com>
+
+pkgbase=siemstress
+pkgname=(siemstress siemstress-gui siemstress-tui)
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Lightweight SIEM for homelabs"
+arch=(any)
+url="https://github.com/Lezaford/siemstress"
+license=(GPL-3.0-or-later)
+makedepends=(python-build python-installer python-hatchling)
+checkdepends=(python-pytest openssl)
+source=("$pkgbase-$pkgver.tar.gz")
+sha256sums=('SKIP')  # set with updpkgsums once the release tarball is published
+
+build() {
+  cd "$pkgbase-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "$pkgbase-$pkgver"
+  PYTHONPATH=src python -m pytest -q -p no:cacheprovider
+}
+
+package_siemstress() {
+  depends=(python systemd)
+  optdepends=('siemstress-gui: desktop dashboard'
+              'siemstress-tui: terminal dashboard')
+  backup=(etc/siemstress/config.toml)
+
+  cd "$pkgbase-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 packaging/siemstress.service "$pkgdir/usr/lib/systemd/system/siemstress.service"
+  install -Dm644 packaging/siemstress.sysusers "$pkgdir/usr/lib/sysusers.d/siemstress.conf"
+  install -Dm644 packaging/siemstress.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/siemstress.conf"
+  install -Dm640 packaging/config.toml "$pkgdir/etc/siemstress/config.toml"
+  install -dm750 "$pkgdir/etc/siemstress/rules"
+  install -Dm644 packaging/siemstress.1 "$pkgdir/usr/share/man/man1/siemstress.1"
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md docs/*.md contrib/config.example.toml
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_siemstress-gui() {
+  pkgdesc="Desktop dashboard for SIEMstress"
+  depends=(siemstress pyside6 hicolor-icon-theme)
+
+  cd "$pkgbase-$pkgver"
+  install -Dm644 packaging/siemstress.desktop "$pkgdir/usr/share/applications/siemstress.desktop"
+  for size in 16 22 24 32 48 64 128 256; do
+    install -Dm644 "src/siemstress/assets/icon-$size.png" \
+      "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/siemstress.png"
+  done
+  install -Dm644 src/siemstress/assets/icon.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/siemstress.svg"
+}
+
+package_siemstress-tui() {
+  pkgdesc="Terminal dashboard for SIEMstress"
+  depends=(siemstress python-textual)
+}

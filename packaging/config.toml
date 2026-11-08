@@ -1,0 +1,21 @@
+# SIEMstress system configuration. Changes take effect after:
+#   sudo systemctl restart siemstress
+# Every option, with explanations: /usr/share/doc/siemstress/config.example.toml
+# Check your setup any time with: siemstress doctor
+
+# This machine's name in SIEMstress (default: its static hostname).
+# hostname = "server1"
+
+# Built-in rules to turn off (list them with `siemstress rules`).
+disabled_rules = []
+
+[syslog]
+# Other machines can send logs once allowed under [syslog.senders].
+listen = "127.0.0.1:5514"
+
+[syslog.senders]
+# "192.168.1.40" = "web01"
+
+# Phone notifications through ntfy (https://ntfy.sh); use a long random topic.
+# [ntfy]
+# topic = "siemstress-CHANGE-ME"

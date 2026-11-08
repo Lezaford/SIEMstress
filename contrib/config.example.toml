@@ -1,0 +1,56 @@
+# Copy to ~/.config/siemstress/config.toml
+
+# This machine's name in SIEMstress. Defaults to its static hostname
+# (`sudo hostnamectl set-hostname NAME`); the DHCP-assigned name is never used.
+# hostname = "desk"
+
+# Built-in rules to turn off (see `siemstress rules`).
+disabled_rules = []
+
+# Phone notifications via ntfy (https://ntfy.sh). Anyone who knows the topic
+# name can read it on the public server, so use a long random one, e.g.
+#   python3 -c "import secrets; print('siemstress-' + secrets.token_urlsafe(12))"
+[ntfy]
+topic = "siemstress-CHANGE-ME"
+# server = "https://ntfy.sh"   # or your self-hosted instance
+# token = "tk_..."             # access token, if the topic is protected
+# allow_insecure = false       # permit a plain http:// server that isn't on this machine
+#                              # (alerts and token then travel unencrypted)
+# min_level = "medium"         # low, medium, high or critical
+
+# Optional inputs. Anything that doesn't exist on this host is skipped without
+# errors or log noise, and picked up automatically if it appears later.
+[sources]
+journal = true                 # this machine's own systemd journal
+# Docker API socket, or false to turn the Docker source off. For rootless Podman,
+# enable its socket (systemctl --user enable --now podman.socket) and use
+# "/run/user/1000/podman/podman.sock".
+docker = "/var/run/docker.sock"
+# Log files to follow (replaces the default Pi-hole paths).
+files = ["/var/log/pihole/pihole.log", "/var/log/pihole.log"]
+
+[syslog]
+# Plain syslog (UDP and TCP). Only this machine and [syslog.senders] may send.
+listen = "127.0.0.1:5514"      # "0.0.0.0:5514" to accept from the network, or "off"
+udp = true                     # UDP source addresses can be forged; prefer TCP or TLS
+# TLS (RFC 5425) with client certificates: each host is named by its certificate.
+# Create certificates with contrib/make-certs.sh.
+# tls_listen = "0.0.0.0:6514"
+# tls_cert = "~/.config/siemstress/tls/siem.crt"
+# tls_key = "~/.config/siemstress/tls/siem.key"
+# tls_ca = "~/.config/siemstress/tls/ca.crt"
+
+# Hosts allowed on the plain listener: address or network = the name to label them
+# with. "" uses the name the host reports (fine for trusted networks). Names given
+# here win over whatever a host claims in its messages.
+[syslog.senders]
+# "192.168.1.40" = "web01"
+# "192.168.1.0/24" = ""
+
+# Which events to keep. Anything outside the scope is dropped before detection and
+# storage, so keep exclusions narrow: an attacker coming from an excluded address is
+# invisible. Patterns are shell-style and case-insensitive.
+[scope]
+# hosts = ["server1", "web*", "debian-*"]  # only these hosts (default: all)
+# exclude_hosts = ["printer*"]            # never these
+# exclude_ips = ["192.168.1.250"]         # e.g. your own vulnerability scanner

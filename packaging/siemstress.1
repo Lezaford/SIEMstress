@@ -1,0 +1,137 @@
+.\" SPDX-FileCopyrightText: 2026 SIEMstress contributors
+.\" SPDX-License-Identifier: GPL-3.0-or-later
+.TH SIEMSTRESS 1 2026-09-23 "siemstress 0.1.0" "User Commands"
+.SH NAME
+siemstress \- lightweight SIEM for homelabs
+.SH SYNOPSIS
+.B siemstress
+.RB [ \-\-config
+.IR FILE ]
+.RB [ \-\-db
+.IR FILE ]
+.RB [ \-v ]
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B siemstress
+collects logs from the local systemd journal, syslog senders on the network, log
+files and the Docker or Podman API; normalizes authentication, privilege, account,
+audit and firewall events; raises alerts from detection rules; and provides a case
+workflow for working those alerts to a close.
+.PP
+On a packaged install the collector runs as the
+.B siemstress
+system service. Members of the
+.B siemstress
+group can use every other command and the dashboards.
+.SH COMMANDS
+.SS Collecting
+.TP
+.B run
+Collect events until stopped. Normally started by systemd.
+.TP
+.B doctor
+Check the installation end to end and explain how to fix any problem.
+.SS Investigating
+.TP
+.B search \fR[\fB\-\-since\fR \fIDURATION\fR] [\fB\-\-host\fR \fIH\fR] [\fB\-\-user\fR \fIU\fR] [\fB\-\-ip\fR \fIIP\fR] [\fB\-\-action\fR \fIA\fR] [\fB\-\-grep\fR \fITEXT\fR]
+Search stored events. Durations look like
+.BR 15m ", " 2h ", " 7d .
+.TP
+.B stats
+Summarize collected events by host, program and action.
+.TP
+.B hunt \fR[\fB\-\-since\fR \fIDURATION\fR]
+Replay stored events through the rules without saving alerts.
+.TP
+.B rules
+List the active detection rules.
+.SS Working alerts
+.TP
+.B alerts \fR[\fB\-\-status\fR \fIunresolved\fR|\fIopen\fR|\fIacknowledged\fR|\fIresolved\fR|\fIall\fR]
+List alerts, unresolved by default.
+.TP
+.B case \fIID\fR
+Print an alert's case file as Markdown: handling, evidence, related events and its
+activity log.
+.TP
+.B ack \fIID\fR...
+Acknowledge alerts and take ownership of unowned ones.
+.TP
+.B assign \fIID\fR... [\fB\-\-to\fR \fIUSER\fR]
+Assign alerts, to yourself by default.
+.TP
+.B note \fIID TEXT\fR
+Add a note to an alert's activity log.
+.TP
+.B resolve \fIID\fR... \fB\-\-disposition\fR \fID\fR \fB\-\-action\fR \fIA\fR... \fB\-\-summary\fR \fITEXT\fR
+Close alerts. Dispositions:
+.BR true\-positive ", " benign\-positive ", " false\-positive ", " undetermined .
+Anything left out is asked for when run in a terminal.
+.TP
+.B reopen \fIID\fR... \fB\-\-reason\fR \fITEXT\fR
+Reopen resolved alerts.
+.TP
+.B report \fR[\fB\-\-since\fR \fIDURATION\fR]
+Alert-handling metrics as Markdown: time to acknowledge and resolve, dispositions,
+false positives per rule.
+.SS Dashboards
+.TP
+.B gui
+Desktop dashboard (package
+.BR siemstress\-gui ).
+.TP
+.B tui
+Terminal dashboard, usable over SSH (package
+.BR siemstress\-tui ).
+.TP
+.B notify\-test
+Send a test notification through the configured ntfy topic.
+.SH FILES
+.TP
+.I /etc/siemstress/config.toml
+System configuration: syslog listener and allowed senders, TLS, collection scope,
+sources and notifications.
+.TP
+.I /etc/siemstress/rules/*.toml
+Local detection rules; a rule with a built-in rule's id replaces it.
+.TP
+.I /var/lib/siemstress/events.db
+Events, alerts and case activity (SQLite).
+.TP
+.I ~/.config/siemstress/config.toml\fR, \fI~/.local/share/siemstress/events.db
+Per-user equivalents, used instead when they exist.
+.SH ENVIRONMENT
+.TP
+.B SIEMSTRESS_CONFIG\fR, \fBSIEMSTRESS_DB
+Override the configuration file and database locations.
+.SH EXAMPLES
+Allow a Debian host to send logs, then check the setup:
+.PP
+.nf
+.RS
+[syslog]
+listen = "0.0.0.0:5514"
+udp = false
+
+[syslog.senders]
+"192.168.1.40" = "web01"
+.RE
+.fi
+.PP
+.nf
+.RS
+sudo systemctl restart siemstress
+siemstress doctor
+.RE
+.fi
+.SH SEE ALSO
+.BR journalctl (1),
+.BR systemd-sysusers (8),
+.BR rsyslog.conf (5)
+.PP
+Documentation in
+.IR /usr/share/doc/siemstress/ :
+detection coverage, alert handling and the annotated example configuration.
+.SH LICENSE
+GPL-3.0-or-later.

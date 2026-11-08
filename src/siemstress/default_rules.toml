@@ -1,0 +1,220 @@
+# Built-in detection rules.
+#
+# Override one by defining a rule with the same id in
+# ~/.config/siemstress/rules/*.toml, or turn it off with `disabled_rules` in config.toml.
+#
+#   match / exclude  field = "glob" or ["glob", ...]; all fields must match.
+#                    Fields: source host app message action outcome user target_user
+#                    src_ip, and extra.<name>.
+#   group_by         fields that separate counters and cooldowns (e.g. per source IP).
+#   threshold        alert when `count` matching events fall within `window`.
+#   after            alert on a match only if `count` events matching `after.match` came
+#                    from the same group within `window` before it (e.g. success after
+#                    failures). Use either threshold or after.
+#   cooldown         silence after alerting, per group. Defaults to the threshold window.
+#   title            may reference fields, {extra[name]} and {count}.
+#   mitre            MITRE ATT&CK technique IDs, shown on every alert the rule raises.
+#
+# Account changes are logged by both shadow-utils and the audit system; the
+# group_by + cooldown on those rules folds the two records into one alert.
+
+[[rule]]
+id = "ssh-brute-force"
+title = "SSH brute force from {src_ip} ({count} failures)"
+level = "high"
+mitre = ["T1110.001", "T1110.003"]
+description = "Many failed SSH logins from one address: password guessing or a scanner."
+match = { action = ["ssh.login", "ssh.invalid_user"], outcome = "failure" }
+group_by = ["src_ip"]
+threshold = { count = 10, window = "5m" }
+cooldown = "1h"
+
+[[rule]]
+id = "ssh-root-login"
+title = "root logged in over SSH from {src_ip}"
+level = "high"
+mitre = ["T1078.003"]
+description = "Direct root SSH logins should normally be disabled (PermitRootLogin no)."
+match = { action = "ssh.login", outcome = "success", user = "root" }
+
+[[rule]]
+id = "login-failures"
+title = "{count} failed logins for {user} on {host}"
+level = "medium"
+mitre = ["T1110.001"]
+description = "Repeated password failures for one account, from any program using PAM."
+match = { action = "auth", outcome = "failure" }
+group_by = ["host", "user"]
+threshold = { count = 5, window = "10m" }
+cooldown = "1h"
+
+[[rule]]
+id = "sudo-password-failures"
+title = "{count} wrong sudo passwords by {user} on {host}"
+level = "medium"
+mitre = ["T1548.003"]
+match = { action = "sudo.exec", outcome = "failure", extra.reason = "*incorrect password*" }
+group_by = ["host", "user"]
+threshold = { count = 2, window = "10m" }
+cooldown = "1h"
+
+[[rule]]
+id = "sudo-not-permitted"
+title = "{user} ran sudo without permission on {host}"
+level = "high"
+mitre = ["T1548.003"]
+description = "An account without sudo rights tried to use it."
+match = { action = "sudo.exec", outcome = "failure", extra.reason = [
+  "*NOT in sudoers*",
+  "*command not allowed*",
+] }
+group_by = ["host", "user"]
+cooldown = "1h"
+
+[[rule]]
+id = "su-failure"
+title = "{user} failed to su to {target_user} on {host}"
+level = "medium"
+mitre = ["T1548"]
+match = { action = "su.switch", outcome = "failure" }
+group_by = ["host", "user"]
+cooldown = "10m"
+
+[[rule]]
+id = "user-created"
+title = "User {target_user} created on {host}"
+level = "medium"
+mitre = ["T1136.001"]
+description = "System accounts created by package installs (systemd-sysusers) are ignored."
+match = { action = "user.create" }
+exclude = { extra.exe = "*systemd-sysusers" }
+group_by = ["host", "target_user"]
+cooldown = "5m"
+
+[[rule]]
+id = "user-deleted"
+title = "User {target_user} deleted on {host}"
+level = "low"
+mitre = ["T1531"]
+match = { action = "user.delete" }
+group_by = ["host", "target_user"]
+cooldown = "5m"
+
+[[rule]]
+id = "privileged-group-member"
+title = "{target_user} added to {extra[group]} on {host}"
+level = "high"
+mitre = ["T1098"]
+description = "Membership in these groups grants root or root-equivalent access."
+match = { action = "group.add_member", extra.group = [
+  "wheel", "sudo", "admin", "root", "adm", "docker", "lxd", "libvirt", "disk",
+] }
+group_by = ["host", "target_user", "extra.group"]
+cooldown = "5m"
+
+[[rule]]
+id = "root-password-changed"
+title = "root password changed on {host}"
+level = "medium"
+mitre = ["T1098", "T1531"]
+match = { action = "password.change", target_user = "root" }
+group_by = ["host"]
+cooldown = "5m"
+
+[[rule]]
+id = "account-locked"
+title = "Account {target_user} locked on {host}"
+level = "medium"
+mitre = ["T1110", "T1531"]
+match = { action = "account.lock" }
+group_by = ["host", "target_user"]
+cooldown = "5m"
+
+[[rule]]
+id = "login-after-failures"
+title = "{user} logged in from {src_ip} after {count} failed attempts"
+level = "critical"
+mitre = ["T1110", "T1078"]
+description = "Failed SSH logins from an address, then a successful one: the guessing may have worked."
+match = { action = "ssh.login", outcome = "success" }
+group_by = ["src_ip"]
+after = { match = { action = ["ssh.login", "ssh.invalid_user"], outcome = "failure" }, count = 5, window = "30m" }
+cooldown = "1h"
+
+[[rule]]
+id = "audit-disabled"
+title = "Audit logging turned off on {host}"
+level = "high"
+mitre = ["T1562.012"]
+description = "auditctl -e 0 stops the kernel recording security events, hiding whatever comes next."
+match = { action = "audit.disable" }
+
+[[rule]]
+id = "audit-rules-removed"
+title = "Audit rules deleted on {host}"
+level = "medium"
+mitre = ["T1562.012"]
+description = "A person deleted audit rules. auditd reloading its rules at boot has no login user and is ignored."
+match = { action = "audit.rule_remove", extra.auid = "*" }
+group_by = ["host"]
+cooldown = "10m"
+
+[[rule]]
+id = "selinux-permissive"
+title = "SELinux switched to permissive on {host}"
+level = "high"
+mitre = ["T1562.001"]
+description = "setenforce 0 turns off SELinux enforcement; attackers do this to get past it."
+match = { action = "selinux.mode", extra.enforcing = "0" }
+
+[[rule]]
+id = "selinux-denials"
+title = "{count} SELinux denials for {extra[comm]} on {host}"
+level = "low"
+mitre = ["T1083"]
+description = "A burst of denials: a misconfigured service, or something probing where it shouldn't."
+match = { action = "selinux.denied" }
+group_by = ["host", "extra.comm"]
+threshold = { count = 10, window = "5m" }
+cooldown = "1h"
+
+[[rule]]
+id = "promiscuous-interface"
+title = "{extra[dev]} entered promiscuous mode on {host}"
+level = "medium"
+mitre = ["T1040"]
+description = "Promiscuous mode lets a host capture traffic not addressed to it (sniffing)."
+match = { action = "network.promiscuous", extra.prom = "256" }
+# VM, container and bridge interfaces do this routinely.
+exclude = { extra.dev = ["vnet*", "virbr*", "veth*", "docker*", "br-*", "tap*", "podman*"] }
+group_by = ["host", "extra.dev"]
+cooldown = "1h"
+
+[[rule]]
+id = "firewall-scan"
+title = "Possible port scan from {src_ip} ({count} blocked connections)"
+level = "medium"
+mitre = ["T1046"]
+match = { action = "firewall.block" }
+group_by = ["src_ip"]
+threshold = { count = 30, window = "1m" }
+cooldown = "1h"
+
+[[rule]]
+id = "container-exec"
+title = "Command run inside container {extra[name]}: {extra[command]}"
+level = "medium"
+mitre = ["T1609"]
+description = "docker exec / podman exec: someone opened a shell or ran a command in a container."
+match = { action = ["docker.container.exec_start", "docker.container.exec"] }
+group_by = ["host", "extra.name"]
+cooldown = "10m"
+
+[[rule]]
+id = "container-restart-loop"
+title = "Container {extra[name]} keeps dying on {host} ({count} exits)"
+level = "medium"
+match = { action = "docker.container.die", outcome = "failure" }
+group_by = ["host", "extra.name"]
+threshold = { count = 5, window = "10m" }
+cooldown = "1h"
